@@ -1,0 +1,19 @@
+---
+- name: Create ansible-ssh user
+  user:
+    name: ansible-ssh
+    comment: Ansible SSH user
+
+- name: Install SSH public key
+  authorized_key:
+    user: ansible-ssh
+    state: present
+    key: "{{ lookup('file', 'files/ansible-ssh.idrsa.pub') }}"  
+
+- name: Enable sudo for ansible-ssh user
+  lineinfile:
+    create: yes
+    state: present
+    path: /etc/sudoers.d/ansible_conf
+    regexp: '^ansible-ssh.*'
+    line: 'ansible-ssh  ALL=(ALL) NOPASSWD: ALL'
