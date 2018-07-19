@@ -17,3 +17,10 @@
     path: /etc/sudoers.d/ansible_conf
     regexp: '^ansible-ssh.*'
     line: 'ansible-ssh  ALL=(ALL) NOPASSWD: ALL'
+
+- name: Install SSH public key for root
+  authorized_key:
+    user: root
+    state: present
+    key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+
