@@ -1,1 +1,6 @@
 ---
+
+- name: restart snmp
+  systemd:
+    state: restarted
+    name: snmpd

@@ -1,26 +1,105 @@
 ---
-- name: Create ansible-ssh user
+- name: Create users
   user:
-    name: ansible-ssh
-    comment: Ansible SSH user
+    name: "{{ item }}"
+  with_items:
+    - sharky
+    - ewillems
+    - ansible-ssh
 
 - name: Install SSH public key
-  authorized_key:
-    user: ansible-ssh
-    state: present
-    key: "{{ lookup('file', 'files/ansible-ssh.idrsa.pub') }}"  
+  vars:
+    users:
+      sharky: sharky.pub
+      ewillems: ewillems.pub
+      ansible-ssh: ansible-ssh.pub 
 
-- name: Enable sudo for ansible-ssh user
+  authorized_key:
+    user: "{{ item.key }}" 
+    state: present
+    key: "{{ lookup('file', 'files/{{ item.value }}') }}"  
+  with_dict: "{{ users }}"
+
+- name: Enable sudo for admins
   lineinfile:
     create: yes
     state: present
-    path: /etc/sudoers.d/ansible_conf
-    regexp: '^ansible-ssh.*'
-    line: 'ansible-ssh  ALL=(ALL) NOPASSWD: ALL'
+    path: /etc/sudoers.d/admins_conf
+    regexp: '^{{ item }}.*'
+    line: '{{ item }}  ALL=(ALL) NOPASSWD: ALL'
+  with_items:
+    - ewillems
+    - sharky
+    - ansible-ssh
 
 - name: Install SSH public key for root
   authorized_key:
     user: root
     state: present
     key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+
+- name: Install epel repository
+  yum: 
+    name: epel-release
+
+- name: Install nload
+  yum:
+    name: nload
+
+
+- name: Make sure SNMP is installed
+  yum:
+    name: net-snmp
+
+- name: copy host file
+  copy:
+    src: /etc/hosts
+    dest: /etc/hosts
+
+- name: Enable service snmpd 
+  systemd:
+    name: snmpd
+    enabled: yes
+    state: started
+
+- name: SNMP config
+  template:
+    src: files/etc-snmpd.conf.j2 
+    dest: /etc/snmp/snmpd.conf
+    owner: root
+    group: root
+    mode: 644
+  notify: restart snmp
+
+- name: Open firewall ports for SNMP
+  iptables:
+    chain: OS_FIREWALL_ALLOW 
+    protocol: udp 
+    destination_port: 161
+    jump: ACCEPT
+  ignore_errors: yes
+
+
+- name: Open firewall ports for SNMP
+  firewalld:
+    port: "{{ item }}" 
+    state: enabled
+  with_items:
+    - 161/udp
+    - 161/tcp
+  ignore_errors: yes
+
+- name: Open firewall ports for SNMP
+  firewalld:
+    port: "{{ item }}"
+    state: enabled
+    permanent: true
+  with_items:
+    - 161/udp
+    - 161/tcp
+  ignore_errors: yes
+
+
+
+
 
